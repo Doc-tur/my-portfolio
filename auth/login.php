@@ -47,7 +47,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             <input class="form-control mb-3" type="password" name="password" placeholder="Password" required>
             <button class="btn btn-accent w-100">Sign In</button>
         </form>
-        <a class="small d-block mt-3 text-center text-secondary" href="../index.php">← Back to portfolio</a>
+        <a class="small d-block mt-3 text-center text-secondary" href="../index.php">← Back to Home Page</a>
     </div>
 </body>
 </html>

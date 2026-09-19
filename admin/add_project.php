@@ -1,91 +1,441 @@
 <?php
-require_once '../includes/db.php'; 
-require_once '../includes/functions.php'; 
+
+require_once '../includes/db.php';
+require_once '../includes/functions.php';
+
 requireAdmin();
 
-$error='';
+$pageTitle = 'Add Project';
 
-if($_SERVER['REQUEST_METHOD']==='POST'){
-    $title=trim($_POST['title']??''); 
-    $category=trim($_POST['category']??''); 
-    $description=trim($_POST['description']??''); 
-    $tech=trim($_POST['technologies']??''); 
-    $url=trim($_POST['website_url']??''); 
-    $github=trim($_POST['github_url']??''); 
-    $featured=isset($_POST['featured'])?1:0;
-    $slug=slugify($title).'-'.bin2hex(random_bytes(3)); 
-    $image=uploadProjectImage($_FILES['image']??null);
+$error = '';
 
-    if($image===false) $error='Invalid image. Use JPG, JPEG, PNG or WEBP under 5MB.';
-    elseif(!$title||!$category||!$description) $error='Title, category and description are required.';
-    else { 
-        $st=$conn->prepare("INSERT INTO projects(title,slug,category,description,technologies,image,website_url,github_url,featured) 
-        VALUES(?,?,?,?,?,?,?,?,?)"); 
+/*
+|--------------------------------------------------------------------------
+| Handle Project Submission
+|--------------------------------------------------------------------------
+*/
 
-        $st->bind_param("ssssssssi",$title,$slug,$category,$description,$tech,$image,$url,$github,$featured); 
-        $st->execute(); flash('success','Project added successfully.'); 
-        
-        header('Location: projects.php'); 
-        
-        exit; 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $title       = trim($_POST['title'] ?? '');
+    $category    = trim($_POST['category'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $tech        = trim($_POST['technologies'] ?? '');
+    $url         = trim($_POST['website_url'] ?? '');
+    $github      = trim($_POST['github_url'] ?? '');
+    $featured    = isset($_POST['featured']) ? 1 : 0;
+
+    $slug = slugify($title) . '-' . bin2hex(random_bytes(3));
+
+    $image = uploadProjectImage($_FILES['image'] ?? null);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validation
+    |--------------------------------------------------------------------------
+    */
+
+    if ($image === false) {
+
+        $error = 'Invalid image. Use JPG, JPEG, PNG or WEBP under 5MB.';
+
+    } elseif (!$title || !$category || !$description) {
+
+        $error = 'Title, category and description are required.';
+
+    } else {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Insert Project
+        |--------------------------------------------------------------------------
+        */
+
+        $st = $conn->prepare("
+            INSERT INTO projects
+            (
+                title,
+                slug,
+                category,
+                description,
+                technologies,
+                image,
+                website_url,
+                github_url,
+                featured
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $st->bind_param(
+            "ssssssssi",
+            $title,
+            $slug,
+            $category,
+            $description,
+            $tech,
+            $image,
+            $url,
+            $github,
+            $featured
+        );
+
+        if ($st->execute()) {
+
+            flash('success', 'Project added successfully.');
+
+            header('Location: projects.php');
+            exit;
+
+        } else {
+
+            $error = 'Unable to add project. Please try again.';
+
+        }
+
+        $st->close();
     }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Admin Header + Sidebar
+|--------------------------------------------------------------------------
+*/
+
+include 'partials/header.php';
+
 ?>
 
-<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Emiabata Mukhtar O. | Add Project</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="../assets/css/style.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container py-5">
-        <a href="projects.php" class="text-secondary">← Projects</a>
-        <h1 class="mt-3">Add Project</h1>
-        <?php if($error): ?>
-            <div class="alert alert-danger"><?=e($error)?></div>
-        <?php endif; ?>
-        <form method="post" enctype="multipart/form-data" class="admin-form mt-4">
-            <div class="row g-3">
-                <div class="col-md-8">
-                    <label>Project Title</label>
-                    <input name="title" class="form-control" required>
-                </div>
-                <div class="col-md-4">
-                    <label>Category</label>
-                    <input name="category" class="form-control" placeholder="E-Commerce" required>
-                </div>
-                <div class="col-12">
-                    <label>Description</label>
-                    <textarea name="description" rows="5" class="form-control" required></textarea>
-                </div>
-                <div class="col-12">
-                    <label>Technologies <small>(comma separated)</small></label>
-                    <input name="technologies" class="form-control" placeholder="PHP, MySQL, Bootstrap, JavaScript">
-                </div>
-                <div class="col-md-6">
-                    <label>Live Website URL</label>
-                    <input type="url" name="website_url" class="form-control" placeholder="https://...">
-                </div>
-                <div class="col-md-6">
-                    <label>GitHub URL</label>
-                    <input type="url" name="github_url" class="form-control" placeholder="https://github.com/...">
-                </div>
-                <div class="col-md-8">
-                    <label>Screenshot</label>
-                    <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp" class="form-control">
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" name="featured" id="featured">
-                        <label class="form-check-label" for="featured">Featured project</label>
-                    </div>
-                </div>
-            </div>
-        </form>
+
+<!-- Page Header -->
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <span class="text-uppercase small text-secondary">
+                Projects
+            </span>
+
+            <h1 class="mt-1 mb-0">
+                Add Project
+            </h1>
+
+        </div>
+
+        <a href="projects.php" class="btn btn-outline-light">
+
+            <i class="bi bi-arrow-left"></i>
+
+            Back to Projects
+
+        </a>
+
     </div>
-</body>
-</html>
+
+
+    <!-- Error Message -->
+
+    <?php if ($error): ?>
+
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+
+            <?= e($error) ?>
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+            ></button>
+
+        </div>
+
+    <?php endif; ?>
+
+
+    <!-- Project Form -->
+
+    <div class="admin-card">
+
+        <div class="mb-4">
+
+            <h4 class="mb-1">
+                Project Information
+            </h4>
+
+            <p class="text-secondary mb-0">
+                Add a new project to your portfolio.
+            </p>
+
+        </div>
+
+
+        <form
+            method="post"
+            enctype="multipart/form-data"
+            class="admin-form"
+        >
+
+            <div class="row g-4">
+
+
+                <!-- Project Title -->
+
+                <div class="col-lg-8">
+
+                    <label for="title" class="form-label">
+                        Project Title
+                    </label>
+
+                    <input
+                        type="text"
+                        name="title"
+                        id="title"
+                        class="form-control"
+                        placeholder="e.g. Remmzy Store"
+                        value="<?= e($_POST['title'] ?? '') ?>"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Category -->
+
+                <div class="col-lg-4">
+
+                    <label for="category" class="form-label">
+                        Category
+                    </label>
+
+                    <input
+                        type="text"
+                        name="category"
+                        id="category"
+                        class="form-control"
+                        placeholder="E-Commerce"
+                        value="<?= e($_POST['category'] ?? '') ?>"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Description -->
+
+                <div class="col-12">
+
+                    <label for="description" class="form-label">
+                        Description
+                    </label>
+
+                    <textarea
+                        name="description"
+                        id="description"
+                        rows="6"
+                        class="form-control"
+                        placeholder="Describe the project..."
+                        required
+                    ><?= e($_POST['description'] ?? '') ?></textarea>
+
+                </div>
+
+
+                <!-- Technologies -->
+
+                <div class="col-12">
+
+                    <label for="technologies" class="form-label">
+
+                        Technologies
+
+                        <small class="text-secondary">
+                            (comma separated)
+                        </small>
+
+                    </label>
+
+                    <input
+                        type="text"
+                        name="technologies"
+                        id="technologies"
+                        class="form-control"
+                        placeholder="PHP, MySQL, Bootstrap, JavaScript"
+                        value="<?= e($_POST['technologies'] ?? '') ?>"
+                    >
+
+                </div>
+
+
+                <!-- Website URL -->
+
+                <div class="col-lg-6">
+
+                    <label for="website_url" class="form-label">
+
+                        Live Website URL
+
+                    </label>
+
+                    <div class="input-group">
+
+                        <span class="input-group-text">
+                            <i class="bi bi-globe2"></i>
+                        </span>
+
+                        <input
+                            type="url"
+                            name="website_url"
+                            id="website_url"
+                            class="form-control"
+                            placeholder="https://example.com"
+                            value="<?= e($_POST['website_url'] ?? '') ?>"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- GitHub URL -->
+
+                <div class="col-lg-6">
+
+                    <label for="github_url" class="form-label">
+
+                        GitHub URL
+
+                    </label>
+
+                    <div class="input-group">
+
+                        <span class="input-group-text">
+                            <i class="bi bi-github"></i>
+                        </span>
+
+                        <input
+                            type="url"
+                            name="github_url"
+                            id="github_url"
+                            class="form-control"
+                            placeholder="https://github.com/username/project"
+                            value="<?= e($_POST['github_url'] ?? '') ?>"
+                        >
+
+                    </div>
+
+                </div>
+
+
+                <!-- Screenshot -->
+
+                <div class="col-lg-8">
+
+                    <label for="image" class="form-label">
+
+                        Project Screenshot
+
+                    </label>
+
+                    <input
+                        type="file"
+                        name="image"
+                        id="image"
+                        accept=".jpg,.jpeg,.png,.webp"
+                        class="form-control"
+                    >
+
+                    <small class="text-secondary">
+                        JPG, JPEG, PNG or WEBP. Maximum size: 5MB.
+                    </small>
+
+                </div>
+
+
+                <!-- Featured -->
+
+                <div class="col-lg-4">
+
+                    <div class="featured-box">
+
+                        <div class="form-check">
+
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                name="featured"
+                                id="featured"
+                                <?= isset($_POST['featured']) ? 'checked' : '' ?>
+                            >
+
+                            <label
+                                class="form-check-label"
+                                for="featured"
+                            >
+
+                                <strong>
+                                    Featured Project
+                                </strong>
+
+                                <small>
+                                    Show this project on the homepage.
+                                </small>
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Buttons -->
+
+                <div class="col-12">
+
+                    <hr class="my-2">
+
+                    <div class="d-flex flex-wrap gap-3 justify-content-end">
+
+                        <a
+                            href="projects.php"
+                            class="btn btn-outline-light"
+                        >
+                            Cancel
+                        </a>
+
+                        <button
+                            type="submit"
+                            class="btn btn-accent"
+                        >
+
+                            <i class="bi bi-check-lg"></i>
+
+                            Add Project
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<?php
+
+include 'partials/footer.php';
+
+?>
